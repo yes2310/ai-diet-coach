@@ -19,9 +19,9 @@ type FeedbackInput = {
 export async function generateDietFeedback(input: FeedbackInput) {
   try {
     const client = createAiClient();
-    const response = await client.responses.create({
+    const response = await client.chat.completions.create({
       model: getAiModel(),
-      input: [
+      messages: [
         {
           role: "system",
           content:
@@ -32,15 +32,16 @@ export async function generateDietFeedback(input: FeedbackInput) {
           content: JSON.stringify(input),
         },
       ],
-      text: {
-        verbosity: "low",
-      },
-      max_output_tokens: 450,
     });
+    const text = extractChatText(response.choices[0]?.message?.content);
+
+    if (!text) {
+      throw new Error("ChatMock returned an empty feedback response.");
+    }
 
     return {
       source: "chatmock",
-      text: response.output_text.trim(),
+      text,
     };
   } catch (error) {
     console.error("[chatmock feedback error]", error);
@@ -60,6 +61,52 @@ export function createAiClient() {
 
 export function getAiModel() {
   return process.env.CHATMOCK_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini";
+}
+
+export function extractChatText(content: unknown) {
+  if (typeof content === "string") {
+    return content.trim();
+  }
+
+  if (!Array.isArray(content)) {
+    return "";
+  }
+
+  return content
+    .map((part) => {
+      if (
+        typeof part === "object" &&
+        part !== null &&
+        "text" in part &&
+        typeof part.text === "string"
+      ) {
+        return part.text;
+      }
+
+      return "";
+    })
+    .join("")
+    .trim();
+}
+
+export function parseJsonFromModelText(text: string) {
+  const clean = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "");
+
+  try {
+    return JSON.parse(clean);
+  } catch {
+    const start = clean.indexOf("{");
+    const end = clean.lastIndexOf("}");
+
+    if (start >= 0 && end > start) {
+      return JSON.parse(clean.slice(start, end + 1));
+    }
+
+    throw new Error("Model response did not contain JSON.");
+  }
 }
 
 export const foodPhotoAnalysisJsonSchema = {

@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { createAiClient, foodPhotoAnalysisJsonSchema, getAiModel } from "@/lib/ai";
+import {
+  createAiClient,
+  extractChatText,
+  foodPhotoAnalysisJsonSchema,
+  getAiModel,
+  parseJsonFromModelText,
+} from "@/lib/ai";
 import { requireUserId } from "@/lib/auth-guard";
 import { foodPhotoAnalysisSchema } from "@/lib/validations";
 
@@ -24,41 +30,35 @@ export async function POST(request: Request) {
   const client = createAiClient();
 
   try {
-    const response = await client.responses.create({
+    const response = await client.chat.completions.create({
       model: getAiModel(),
-      input: [
+      messages: [
         {
           role: "system",
           content:
-            "Estimate visible foods from the image. Return realistic Korean food candidates. Nutrition values must describe the estimated portion, not per 100g. If uncertain, set low confidence and ask for confirmation.",
+            "Estimate visible foods from the image. Return realistic Korean food candidates. Nutrition values must describe the estimated portion, not per 100g. If uncertain, set low confidence and ask for confirmation. Return only valid JSON.",
         },
         {
           role: "user",
           content: [
             {
-              type: "input_text",
-              text: "사진 속 음식 후보, 예상 중량, 총 칼로리와 탄단지 값을 JSON으로 추정해줘.",
+              type: "text",
+              text: `사진 속 음식 후보, 예상 중량, 총 칼로리와 탄단지 값을 JSON으로 추정해줘. 다음 JSON Schema에 맞춰 JSON 객체만 반환해줘: ${JSON.stringify(foodPhotoAnalysisJsonSchema)}`,
             },
             {
-              type: "input_image",
-              image_url: dataUrl,
-              detail: "low",
+              type: "image_url",
+              image_url: {
+                url: dataUrl,
+                detail: "low",
+              },
             },
           ],
         },
       ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "food_photo_analysis",
-          strict: true,
-          schema: foodPhotoAnalysisJsonSchema,
-        },
-      },
-      max_output_tokens: 800,
     });
+    const text = extractChatText(response.choices[0]?.message?.content);
 
-    const parsed = foodPhotoAnalysisSchema.parse(JSON.parse(response.output_text));
+    const parsed = foodPhotoAnalysisSchema.parse(parseJsonFromModelText(text));
 
     return NextResponse.json({
       source: "chatmock",
