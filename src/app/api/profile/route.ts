@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth-guard";
 import { calculateTargets, healthWarnings } from "@/lib/nutrition";
 import { prisma } from "@/lib/prisma";
+import { withApiLogging } from "@/lib/request-log";
 import { profileSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+async function getHandler() {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -24,10 +25,10 @@ export async function GET() {
   });
 }
 
-export async function PUT(request: Request) {
+async function putHandler(request: Request) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -56,3 +57,6 @@ export async function PUT(request: Request) {
     warnings: healthWarnings(profile),
   });
 }
+
+export const GET = withApiLogging(getHandler);
+export const PUT = withApiLogging(putHandler);

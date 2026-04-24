@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth-guard";
 import { calculateFoodAmount } from "@/lib/nutrition";
 import { prisma } from "@/lib/prisma";
+import { withApiLogging } from "@/lib/request-log";
 import { mealInputSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function getHandler(request: Request) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -25,10 +26,10 @@ export async function GET(request: Request) {
   return NextResponse.json({ meals });
 }
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -57,6 +58,9 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ meal }, { status: 201 });
 }
+
+export const GET = withApiLogging(getHandler);
+export const POST = withApiLogging(postHandler);
 
 export async function normalizeMealItems(
   items: typeof mealInputSchema._output.items,

@@ -7,14 +7,15 @@ import {
   parseJsonFromModelText,
 } from "@/lib/ai";
 import { requireUserId } from "@/lib/auth-guard";
+import { withApiLogging } from "@/lib/request-log";
 import { foodPhotoAnalysisSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -87,3 +88,5 @@ export async function POST(request: Request) {
     });
   }
 }
+
+export const POST = withApiLogging(postHandler);

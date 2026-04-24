@@ -45,6 +45,7 @@ model User {
 
   profile Profile?
   meals   Meal[]
+  requestLogs RequestLog[]
 }
 
 model VerificationToken {
@@ -128,4 +129,22 @@ model MealItem {
 
   meal     Meal      @relation(fields: [mealId], references: [id], onDelete: Cascade)
   foodItem FoodItem? @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+}
+
+model RequestLog {
+  id         String   @id @default(cuid())
+  ip         String
+  method     String
+  path       String
+  statusCode Int
+  userAgent  String?
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([ip, createdAt])
+  @@index([path, createdAt])
+  @@index([userId, createdAt])
 }

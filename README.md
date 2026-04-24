@@ -107,10 +107,27 @@ npm run test
 npm run build
 ```
 
+## 접속 IP / API 사용량 조회
+
+API 요청은 `RequestLog` 테이블에 IP, user-agent, method, path, status, 사용자 id, 시간을 저장합니다. 운영자는 서버 터미널에서 바로 조회할 수 있습니다.
+
+```bash
+npm run usage:stats
+npm run usage:stats -- 30
+```
+
+외부에서 API로 조회하려면 `.env`에 `ADMIN_TOKEN`을 긴 랜덤값으로 설정한 뒤 아래처럼 호출합니다.
+
+```bash
+curl "http://공인IP:9000/api/admin/usage?days=7&limit=100" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
 ## 환경변수
 
 - `DATABASE_URL`: PostgreSQL 연결 문자열
 - `AUTH_SECRET`: Auth.js 세션 서명용 긴 랜덤 문자열
 - `NEXTAUTH_URL`: 로컬 기본값 `http://localhost:9000`
 - `AUTH_TRUST_HOST`: 공인 IP 또는 프록시 환경에서 Auth.js host 검증 허용
+- `ADMIN_TOKEN`: 접속 IP/API 사용량 조회용 관리자 토큰
 - `CHATMOCK_BASE_URL`, `CHATMOCK_API_KEY`, `CHATMOCK_MODEL`: ChatMock OpenAI 호환 API 설정

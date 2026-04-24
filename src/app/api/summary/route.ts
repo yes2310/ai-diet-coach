@@ -8,13 +8,14 @@ import {
   sumMealItems,
 } from "@/lib/nutrition";
 import { prisma } from "@/lib/prisma";
+import { withApiLogging } from "@/lib/request-log";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function getHandler(request: Request) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -71,3 +72,5 @@ export async function GET(request: Request) {
     feedback,
   });
 }
+
+export const GET = withApiLogging(getHandler);

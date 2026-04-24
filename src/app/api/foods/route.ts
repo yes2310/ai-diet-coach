@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
+import { withApiLogging } from "@/lib/request-log";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function getHandler(request: Request) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -29,3 +30,5 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ foods });
 }
+
+export const GET = withApiLogging(getHandler);

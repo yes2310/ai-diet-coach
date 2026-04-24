@@ -4,8 +4,11 @@ export async function requireUserId() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return { error: Response.json({ error: "Unauthorized" }, { status: 401 }) };
+    return {
+      ok: false as const,
+      error: Response.json({ error: "Unauthorized" }, { status: 401 }),
+    };
   }
 
-  return { userId: session.user.id, session };
+  return { ok: true as const, userId: session.user.id, session };
 }

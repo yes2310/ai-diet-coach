@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
+import { withApiLogging } from "@/lib/request-log";
 import { mealInputSchema } from "@/lib/validations";
 import { normalizeMealItems } from "../route";
 
@@ -10,10 +11,10 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-export async function PUT(request: Request, context: Params) {
+async function putHandler(request: Request, context: Params) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -56,10 +57,10 @@ export async function PUT(request: Request, context: Params) {
   return NextResponse.json({ meal });
 }
 
-export async function DELETE(_request: Request, context: Params) {
+async function deleteHandler(_request: Request, context: Params) {
   const auth = await requireUserId();
 
-  if ("error" in auth) {
+  if (!auth.ok) {
     return auth.error;
   }
 
@@ -76,3 +77,6 @@ export async function DELETE(_request: Request, context: Params) {
 
   return NextResponse.json({ ok: true });
 }
+
+export const PUT = withApiLogging(putHandler);
+export const DELETE = withApiLogging(deleteHandler);

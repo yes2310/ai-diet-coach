@@ -1,11 +1,12 @@
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withApiLogging } from "@/lib/request-log";
 import { registerSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = registerSchema.safeParse(body);
 
@@ -39,3 +40,5 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true, email });
 }
+
+export const POST = withApiLogging(postHandler);

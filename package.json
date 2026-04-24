@@ -11,7 +11,8 @@
     "test": "vitest run",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "usage:stats": "tsx scripts/usage-stats.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
