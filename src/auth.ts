@@ -8,6 +8,7 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
+  trustHost: true,
   secret:
     process.env.AUTH_SECRET ??
     (process.env.NODE_ENV === "production"

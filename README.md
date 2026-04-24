@@ -39,6 +39,7 @@ npm run serve
 
 ```env
 NEXTAUTH_URL="http://공인IP:3000"
+AUTH_TRUST_HOST="true"
 ```
 
 ## 리눅스 운영 배포
@@ -62,6 +63,7 @@ sudo nano .env
 ```env
 AUTH_SECRET="긴_랜덤_문자열"
 NEXTAUTH_URL="http://공인IP:3000"
+AUTH_TRUST_HOST="true"
 DATABASE_URL="postgresql://nutrition:nutrition@localhost:5432/nutrition_ai?schema=public"
 CHATMOCK_BASE_URL="http://127.0.0.1:8000/v1"
 ```
@@ -111,5 +113,6 @@ npm run build
 - `DATABASE_URL`: PostgreSQL 연결 문자열
 - `AUTH_SECRET`: Auth.js 세션 서명용 긴 랜덤 문자열
 - `NEXTAUTH_URL`: 로컬 기본값 `http://localhost:3000`
+- `AUTH_TRUST_HOST`: 공인 IP 또는 프록시 환경에서 Auth.js host 검증 허용
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: 인증 메일 발송 설정
 - `CHATMOCK_BASE_URL`, `CHATMOCK_API_KEY`, `CHATMOCK_MODEL`: ChatMock OpenAI 호환 API 설정
