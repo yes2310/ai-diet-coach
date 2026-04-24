@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+}
+
+enum Goal {
+  LOSS
+  MAINTAIN
+  GAIN
+  MUSCLE
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile Profile?
+  meals   Meal[]
+}
+
+model VerificationToken {
+  id         String   @id @default(cuid())
+  identifier String
+  tokenHash  String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([identifier])
+}
+
+model Profile {
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  age            Int
+  gender         Gender
+  heightCm       Float
+  weightKg       Float
+  activityLevel  ActivityLevel
+  goal           Goal
+  allergies      String[]
+  conditions     String[]
+  preferredFoods String[]
+  dislikedFoods  String[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FoodItem {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  servingLabel String
+  servingGrams Float
+  calories     Float
+  carbs         Float
+  protein       Float
+  fat           Float
+  sodiumMg      Float   @default(0)
+  sugar         Float   @default(0)
+  fiber         Float   @default(0)
+  source        String  @default("seed")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mealItems MealItem[]
+}
+
+model Meal {
+  id        String   @id @default(cuid())
+  userId    String
+  dateKey   String
+  mealType  MealType
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items MealItem[]
+
+  @@index([userId, dateKey])
+}
+
+model MealItem {
+  id          String   @id @default(cuid())
+  mealId      String
+  foodItemId  String?
+  foodName    String
+  amountGrams Float
+  calories    Float
+  carbs        Float
+  protein      Float
+  fat          Float
+  sodiumMg     Float   @default(0)
+  sugar        Float   @default(0)
+  fiber        Float   @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  meal     Meal      @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  foodItem FoodItem? @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nutrition-ai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nutrition
+      POSTGRES_PASSWORD: nutrition
+      POSTGRES_DB: nutrition_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - nutrition_ai_pgdata:/var/lib/postgresql/data
+
+volumes:
+  nutrition_ai_pgdata:
