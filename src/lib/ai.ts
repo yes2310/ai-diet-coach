@@ -17,6 +17,14 @@ type FeedbackInput = {
 };
 
 export async function generateDietFeedback(input: FeedbackInput) {
+  if (input.totals.calories <= 0) {
+    return {
+      source: "rule",
+      model: "기록 대기",
+      text: "아직 저장된 식사가 없습니다. 첫 식사를 기록하면 목표 칼로리와 탄단지 기준으로 피드백을 제공할게요.",
+    };
+  }
+
   try {
     const client = createAiClient();
     const response = await client.chat.completions.create({
@@ -25,11 +33,11 @@ export async function generateDietFeedback(input: FeedbackInput) {
         {
           role: "system",
           content:
-            "You are a Korean nutrition coaching assistant. Give practical food logging feedback. Do not diagnose, treat, or prescribe. Mention medical caution when conditions are present.",
+            "You are a Korean nutrition coaching assistant. Do not diagnose, treat, or prescribe. Return only a compact JSON object with this shape: {\"summary\":\"one natural Korean sentence\", \"actions\":[\"short action 1\", \"short action 2\", \"short action 3\"]}. Do not use markdown, headings, bullet symbols, backticks, or code formatting.",
         },
         {
           role: "user",
-          content: JSON.stringify(input),
+          content: `다음 식사 기록을 바탕으로 사용자가 바로 실행할 수 있는 짧은 피드백을 한국어로 작성해줘. 총 4문장 이하로 유지해줘.\n${JSON.stringify(input)}`,
         },
       ],
     });
@@ -41,12 +49,14 @@ export async function generateDietFeedback(input: FeedbackInput) {
 
     return {
       source: "chatmock",
-      text,
+      model: getAiModel(),
+      text: normalizeFeedbackText(text),
     };
   } catch (error) {
     console.error("[chatmock feedback error]", error);
     return {
       source: "rule",
+      model: "규칙 기반",
       text: createRuleBasedFeedback(input.comparisons, input.profile),
     };
   }
@@ -107,6 +117,36 @@ export function parseJsonFromModelText(text: string) {
 
     throw new Error("Model response did not contain JSON.");
   }
+}
+
+export function normalizeFeedbackText(text: string) {
+  try {
+    const parsed = parseJsonFromModelText(text) as {
+      summary?: unknown;
+      actions?: unknown;
+    };
+    const lines = [
+      typeof parsed.summary === "string" ? parsed.summary : "",
+      ...(Array.isArray(parsed.actions)
+        ? parsed.actions.filter((item): item is string => typeof item === "string")
+        : []),
+    ].filter(Boolean);
+
+    if (lines.length) {
+      return lines.join("\n");
+    }
+  } catch {
+    // Fall through to plain-text cleanup for non-JSON responses.
+  }
+
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/`/g, "")
+    .split(/\n+/)
+    .map((line) => line.replace(/^\s*[-*]\s*/, "").trim())
+    .filter(Boolean)
+    .slice(0, 5)
+    .join("\n");
 }
 
 export const foodPhotoAnalysisJsonSchema = {

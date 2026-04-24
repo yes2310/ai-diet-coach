@@ -46,13 +46,20 @@ export async function GET(request: Request) {
   const totals = sumMealItems(meals.flatMap((meal) => meal.items));
   const comparisons = compareNutrition(targets, totals);
   const warnings = healthWarnings(profile);
-  const feedback = await generateDietFeedback({
-    profile,
-    targets,
-    totals,
-    comparisons,
-    warnings,
-  });
+  const feedback =
+    meals.length > 0
+      ? await generateDietFeedback({
+          profile,
+          targets,
+          totals,
+          comparisons,
+          warnings,
+        })
+      : {
+          source: "rule",
+          model: "기록 대기",
+          text: "아직 저장된 식사가 없습니다. 첫 식사를 기록하면 목표 칼로리와 탄단지 기준으로 피드백을 제공할게요.",
+        };
 
   return NextResponse.json({
     profile,

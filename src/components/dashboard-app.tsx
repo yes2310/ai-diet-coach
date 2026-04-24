@@ -103,6 +103,7 @@ type Comparison = {
 
 type Feedback = {
   source: "chatmock" | "rule";
+  model?: string;
   text: string;
 };
 
@@ -187,6 +188,13 @@ function statusClass(status: Status) {
   if (status === "LOW") return "bg-amber-50 text-amber-800 border-amber-200";
   if (status === "HIGH") return "bg-red-50 text-red-800 border-red-200";
   return "bg-emerald-50 text-emerald-800 border-emerald-200";
+}
+
+function feedbackLines(text?: string) {
+  return (text ?? "식사 기록을 추가하면 피드백이 표시됩니다.")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function itemTotal(items: MealItem[]) {
@@ -551,13 +559,15 @@ function HomePanel({
         <section className="rounded-lg border border-[var(--line)] bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <SectionHeader title="AI 피드백" />
-            <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600">
-              {summary.feedback?.source === "chatmock" ? "ChatMock" : "규칙 기반"}
+            <span className="text-xs font-medium text-zinc-500">
+              {summary.feedback?.model ?? "규칙 기반"}
             </span>
           </div>
-          <p className="mt-4 text-sm leading-7 text-zinc-700">
-            {summary.feedback?.text ?? "식사 기록을 추가하면 피드백이 표시됩니다."}
-          </p>
+          <div className="mt-4 space-y-2 text-sm leading-6 text-zinc-700">
+            {feedbackLines(summary.feedback?.text).map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
           <button
             onClick={onRefresh}
             className="mt-5 inline-flex h-10 items-center gap-2 rounded-md border border-[var(--line)] px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
@@ -1146,6 +1156,17 @@ function PhotoAnalyzer({ dateKey, onSaved }: { dateKey: string; onSaved: () => v
     };
   }, [previewUrl]);
 
+  function selectFile(nextFile: File | null) {
+    setFile(nextFile);
+    setPreviewUrl((currentUrl) => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+      }
+
+      return nextFile ? URL.createObjectURL(nextFile) : "";
+    });
+  }
+
   async function analyze() {
     if (!file) return;
     setLoading(true);
@@ -1237,20 +1258,33 @@ function PhotoAnalyzer({ dateKey, onSaved }: { dateKey: string; onSaved: () => v
               ))}
             </select>
           </Field>
-          <Field label="사진 업로드">
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(event) => {
-                const nextFile = event.target.files?.[0] ?? null;
-
-                setFile(nextFile);
-                setPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : "");
-              }}
-              className="input file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
-            />
-          </Field>
+          <div>
+            <p className="text-sm font-medium text-zinc-800">사진 선택</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <label className="flex h-12 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-800 hover:bg-zinc-50">
+                갤러리에서 선택
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
+                  className="sr-only"
+                />
+              </label>
+              <label className="flex h-12 items-center justify-center rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white hover:bg-zinc-800">
+                카메라로 촬영
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+            {file ? (
+              <p className="mt-2 truncate text-xs text-zinc-500">{file.name}</p>
+            ) : null}
+          </div>
           {previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -1363,9 +1397,11 @@ function AnalysisPanel({ summary, onRefresh }: { summary: Summary; onRefresh: ()
 
       <section className="rounded-lg border border-[var(--line)] bg-white p-5 shadow-sm">
         <SectionHeader title="피드백" />
-        <p className="mt-4 text-sm leading-7 text-zinc-700">
-          {summary.feedback?.text ?? "분석할 식사 기록이 없습니다."}
-        </p>
+        <div className="mt-4 space-y-2 text-sm leading-6 text-zinc-700">
+          {feedbackLines(summary.feedback?.text ?? "분석할 식사 기록이 없습니다.").map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
       </section>
     </div>
   );
