@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { LockKeyhole, Mail, UserRound } from "lucide-react";
@@ -32,7 +33,19 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    const loginResult = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (loginResult?.error) {
+      router.push("/login");
+      return;
+    }
+
+    router.push("/");
+    router.refresh();
   }
 
   return (
@@ -44,7 +57,7 @@ export default function RegisterPage() {
             회원가입
           </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
-            가입 후 이메일 인증을 완료해야 식단 분석 기능을 사용할 수 있습니다.
+            가입 후 바로 식단 기록과 AI 피드백 기능을 사용할 수 있습니다.
           </p>
         </div>
 
@@ -102,7 +115,7 @@ export default function RegisterPage() {
             className="mt-5 h-12 w-full rounded-md bg-zinc-950 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
             disabled={loading}
           >
-            {loading ? "가입 중..." : "가입하고 인증 메일 받기"}
+            {loading ? "가입 중..." : "가입하고 시작하기"}
           </button>
         </form>
 

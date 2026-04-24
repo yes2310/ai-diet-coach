@@ -9,10 +9,6 @@ export default async function Home() {
     redirect("/login");
   }
 
-  if (!session.user.isEmailVerified) {
-    redirect(`/verify-email?email=${encodeURIComponent(session.user.email ?? "")}`);
-  }
-
   return (
     <DashboardApp
       userName={session.user.name ?? "사용자"}

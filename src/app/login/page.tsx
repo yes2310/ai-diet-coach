@@ -14,7 +14,7 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const verified = searchParams.get("verified") === "1";
+  const registered = searchParams.get("registered") === "1";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,7 +30,7 @@ function LoginContent() {
     setLoading(false);
 
     if (result?.error) {
-      setError("이메일, 비밀번호, 또는 이메일 인증 상태를 확인하세요.");
+      setError("이메일 또는 비밀번호를 확인하세요.");
       return;
     }
 
@@ -47,13 +47,13 @@ function LoginContent() {
             로그인
           </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
-            이메일 인증을 완료한 계정으로 식사 기록과 AI 피드백을 관리하세요.
+            가입한 계정으로 식사 기록과 AI 피드백을 관리하세요.
           </p>
         </div>
 
-        {verified ? (
+        {registered ? (
           <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.
+            회원가입이 완료되었습니다. 이제 로그인할 수 있습니다.
           </div>
         ) : null}
 

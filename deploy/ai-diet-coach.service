@@ -8,7 +8,7 @@ Type=simple
 WorkingDirectory=/opt/ai-diet-coach
 Environment=NODE_ENV=production
 Environment=APP_HOST=0.0.0.0
-Environment=APP_PORT=3000
+Environment=APP_PORT=9000
 ExecStart=/bin/bash /opt/ai-diet-coach/scripts/serve.sh
 Restart=always
 RestartSec=10

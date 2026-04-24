@@ -4,7 +4,7 @@ Next.js, Auth.js, Prisma, PostgreSQL, ChatMock 호환 AI API를 사용하는 모
 
 ## 주요 기능
 
-- 이메일/비밀번호 회원가입, 로그인, 이메일 인증
+- 이메일/비밀번호 회원가입, 로그인
 - 사용자 프로필 기반 BMR, TDEE, 목표 칼로리, 탄단지 g 계산
 - 음식 DB 검색, 직접 입력, 식사 기록 추가/수정/삭제
 - 권장량과 실제 섭취량 비교
@@ -22,9 +22,8 @@ npm run db:seed
 npm run dev
 ```
 
-브라우저에서 `http://localhost:3000`을 엽니다.
+브라우저에서 `http://localhost:9000`을 엽니다.
 
-SMTP 환경변수를 비워두면 이메일 인증 링크가 개발 서버 콘솔에 출력됩니다.
 AI 기능은 ChatMock 로컬 서버를 기본값으로 사용합니다. `chatmock login && chatmock serve`를 실행하면 `http://127.0.0.1:8000/v1`로 연결됩니다. 서버가 꺼져 있으면 피드백은 규칙 기반으로, 사진 인식은 예시 후보로 동작합니다.
 
 ## 한번에 실행
@@ -33,12 +32,12 @@ AI 기능은 ChatMock 로컬 서버를 기본값으로 사용합니다. `chatmoc
 npm run serve
 ```
 
-`scripts/serve.sh`는 `.env` 생성, PostgreSQL 컨테이너 실행, Prisma 반영, seed, production build, `0.0.0.0:3000` 바인딩까지 처리합니다.
+`scripts/serve.sh`는 `.env` 생성, PostgreSQL 컨테이너 실행, Prisma 반영, seed, production build, `0.0.0.0:9000` 바인딩까지 처리합니다.
 
-외부 접속 주소가 공인 IP라면 `.env`의 `NEXTAUTH_URL`을 실제 주소로 바꿔야 인증 링크와 세션 콜백이 맞습니다.
+외부 접속 주소가 공인 IP라면 `.env`의 `NEXTAUTH_URL`을 실제 주소로 바꿔야 세션 콜백이 맞습니다.
 
 ```env
-NEXTAUTH_URL="http://공인IP:3000"
+NEXTAUTH_URL="http://공인IP:9000"
 AUTH_TRUST_HOST="true"
 ```
 
@@ -62,7 +61,7 @@ sudo nano .env
 
 ```env
 AUTH_SECRET="긴_랜덤_문자열"
-NEXTAUTH_URL="http://공인IP:3000"
+NEXTAUTH_URL="http://공인IP:9000"
 AUTH_TRUST_HOST="true"
 DATABASE_URL="postgresql://nutrition:nutrition@localhost:5432/nutrition_ai?schema=public"
 CHATMOCK_BASE_URL="http://127.0.0.1:8000/v1"
@@ -71,7 +70,7 @@ CHATMOCK_BASE_URL="http://127.0.0.1:8000/v1"
 방화벽에서 외부 접속 포트를 열어야 합니다.
 
 ```bash
-sudo ufw allow 3000/tcp
+sudo ufw allow 9000/tcp
 sudo ufw allow 22/tcp
 sudo ufw enable
 ```
@@ -112,7 +111,6 @@ npm run build
 
 - `DATABASE_URL`: PostgreSQL 연결 문자열
 - `AUTH_SECRET`: Auth.js 세션 서명용 긴 랜덤 문자열
-- `NEXTAUTH_URL`: 로컬 기본값 `http://localhost:3000`
+- `NEXTAUTH_URL`: 로컬 기본값 `http://localhost:9000`
 - `AUTH_TRUST_HOST`: 공인 IP 또는 프록시 환경에서 Auth.js host 검증 허용
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: 인증 메일 발송 설정
 - `CHATMOCK_BASE_URL`, `CHATMOCK_API_KEY`, `CHATMOCK_MODEL`: ChatMock OpenAI 호환 API 설정
