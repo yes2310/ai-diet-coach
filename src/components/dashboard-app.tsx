@@ -4,19 +4,24 @@ import clsx from "clsx";
 import { signOut } from "next-auth/react";
 import {
   Activity,
-  BarChart3,
-  Camera,
-  ChefHat,
-  Home,
   LogOut,
   Plus,
   RefreshCw,
   Search,
-  Settings,
   Trash2,
 } from "lucide-react";
-import type { ComponentType, FormEvent, ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  DesktopDashboardNavigation,
+  MobileDashboardNavigation,
+  type TabId,
+} from "@/components/dashboard-navigation";
+import { PhotoAnalyzer } from "@/components/photo-analyzer";
+import {
+  dashboardTitle,
+  shouldShowDashboardNavigation,
+} from "@/lib/dashboard-shell";
 import { formatList } from "@/lib/strings";
 
 type Gender = "MALE" | "FEMALE" | "OTHER";
@@ -117,8 +122,6 @@ type Summary = {
   feedback: Feedback | null;
 };
 
-type TabId = "home" | "meals" | "photo" | "analysis" | "profile";
-
 const genderLabels: Record<Gender, string> = {
   MALE: "남성",
   FEMALE: "여성",
@@ -145,18 +148,6 @@ const mealLabels: Record<MealType, string> = {
   DINNER: "저녁",
   SNACK: "간식",
 };
-
-const tabs: Array<{
-  id: TabId;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-}> = [
-  { id: "home", label: "홈", icon: Home },
-  { id: "meals", label: "기록", icon: ChefHat },
-  { id: "photo", label: "사진", icon: Camera },
-  { id: "analysis", label: "분석", icon: BarChart3 },
-  { id: "profile", label: "내 정보", icon: Settings },
-];
 
 function todayKey() {
   const date = new Date();
@@ -397,42 +388,37 @@ export function DashboardApp({
     );
   }, [activeTab, dateKey, error, loadSummary, loading, summary, userEmail]);
 
-  return (
-    <main className="min-h-dvh bg-[var(--background)] pb-24 lg:pb-0">
-      <div className="mx-auto grid min-h-dvh w-full max-w-7xl lg:grid-cols-[230px_1fr]">
-        <aside className="hidden border-r border-[var(--line)] bg-white/80 px-4 py-6 lg:block">
-          <div className="mb-8">
-            <p className="text-sm font-semibold text-blue-700">AI 식단 분석</p>
-            <p className="mt-2 text-sm text-zinc-500">{userName}</p>
-          </div>
-          <nav className="space-y-1">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={clsx(
-                    "flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition",
-                    activeTab === tab.id
-                      ? "bg-zinc-950 text-white"
-                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950",
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
+  const showNavigation = shouldShowDashboardNavigation({ summary, loading, error });
+  const pageTitle = dashboardTitle({ summary, loading, error });
 
+  return (
+    <main
+      className={clsx(
+        "min-h-dvh bg-[var(--background)]",
+        showNavigation ? "pb-24 lg:pb-0" : "pb-0",
+      )}
+    >
+      <div
+        className={clsx(
+          "mx-auto grid min-h-dvh w-full",
+          showNavigation
+            ? "max-w-7xl lg:grid-cols-[230px_1fr]"
+            : "max-w-3xl",
+        )}
+      >
+        {showNavigation ? (
+          <DesktopDashboardNavigation
+            activeTab={activeTab}
+            userName={userName}
+            onSelect={setActiveTab}
+          />
+        ) : null}
         <section className="min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
           <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-zinc-500">안녕하세요, {userName}님</p>
               <h1 className="mt-1 text-2xl font-semibold text-zinc-950">
-                오늘 식단 상태
+                {pageTitle}
               </h1>
             </div>
             <button
@@ -448,26 +434,9 @@ export function DashboardApp({
         </section>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white px-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <div className="mx-auto grid h-16 max-w-md grid-cols-5">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={clsx(
-                  "flex flex-col items-center justify-center gap-1 text-xs font-medium",
-                  activeTab === tab.id ? "text-blue-700" : "text-zinc-500",
-                )}
-              >
-                <Icon className="h-5 w-5" aria-hidden />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      {showNavigation ? (
+        <MobileDashboardNavigation activeTab={activeTab} onSelect={setActiveTab} />
+      ) : null}
     </main>
   );
 }
@@ -1131,214 +1100,6 @@ function MealLogger({
             </p>
           ) : null}
         </div>
-      </section>
-    </div>
-  );
-}
-
-function PhotoAnalyzer({ dateKey, onSaved }: { dateKey: string; onSaved: () => void }) {
-  const [mealType, setMealType] = useState<MealType>("LUNCH");
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [analysis, setAnalysis] = useState<{
-    candidates: MealItem[];
-    needsUserConfirmation: boolean;
-    question: string;
-  } | null>(null);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  function selectFile(nextFile: File | null) {
-    setFile(nextFile);
-    setPreviewUrl((currentUrl) => {
-      if (currentUrl) {
-        URL.revokeObjectURL(currentUrl);
-      }
-
-      return nextFile ? URL.createObjectURL(nextFile) : "";
-    });
-  }
-
-  async function analyze() {
-    if (!file) return;
-    setLoading(true);
-    setMessage("");
-    setAnalysis(null);
-
-    const formData = new FormData();
-    formData.append("image", file);
-    const response = await fetch("/api/photo/analyze", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await response.json();
-    setLoading(false);
-
-    if (!response.ok) {
-      setMessage(data.error ?? "사진 분석에 실패했습니다.");
-      return;
-    }
-
-    setAnalysis({
-      needsUserConfirmation: data.analysis.needsUserConfirmation,
-      question: data.analysis.question,
-      candidates: data.analysis.candidates.map(
-        (candidate: {
-          name: string;
-          estimatedGrams: number;
-          calories: number;
-          carbs: number;
-          protein: number;
-          fat: number;
-          note?: string;
-        }) => ({
-          foodName: candidate.name,
-          amountGrams: candidate.estimatedGrams,
-          calories: candidate.calories,
-          carbs: candidate.carbs,
-          protein: candidate.protein,
-          fat: candidate.fat,
-          sodiumMg: 0,
-          sugar: 0,
-          fiber: 0,
-          foodItemId: null,
-        }),
-      ),
-    });
-  }
-
-  async function saveCandidate(candidate: MealItem) {
-    const response = await fetch("/api/meals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        dateKey,
-        mealType,
-        note: "사진 인식 후보에서 저장",
-        items: [candidate],
-      }),
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      setMessage(data.error ?? "사진 후보 저장에 실패했습니다.");
-      return;
-    }
-
-    setMessage("사진 후보를 식사 기록에 저장했습니다.");
-    onSaved();
-  }
-
-  return (
-    <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-      <section className="rounded-lg border border-[var(--line)] bg-white p-5 shadow-sm">
-        <SectionHeader
-          title="음식 사진 인식"
-          description="사진은 후보 추정용입니다. 저장 전 음식명과 중량을 반드시 확인하세요."
-        />
-        <div className="mt-5 space-y-4">
-          <Field label="식사 구분">
-            <select
-              value={mealType}
-              onChange={(event) => setMealType(event.target.value as MealType)}
-              className="input"
-            >
-              {Object.entries(mealLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div>
-            <p className="text-sm font-medium text-zinc-800">사진 선택</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <label className="flex h-12 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-800 hover:bg-zinc-50">
-                갤러리에서 선택
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
-                  className="sr-only"
-                />
-              </label>
-              <label className="flex h-12 items-center justify-center rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white hover:bg-zinc-800">
-                카메라로 촬영
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
-                  className="sr-only"
-                />
-              </label>
-            </div>
-            {file ? (
-              <p className="mt-2 truncate text-xs text-zinc-500">{file.name}</p>
-            ) : null}
-          </div>
-          {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt="업로드한 음식"
-              className="aspect-[4/3] w-full rounded-lg object-cover"
-            />
-          ) : null}
-          <button
-            onClick={analyze}
-            disabled={!file || loading}
-            className="h-12 w-full rounded-md bg-zinc-950 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-60"
-          >
-            {loading ? "분석 중..." : "사진 분석하기"}
-          </button>
-          {message ? <p className="text-sm text-zinc-700">{message}</p> : null}
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-[var(--line)] bg-white p-5 shadow-sm">
-        <SectionHeader title="분석 후보" description="낮은 신뢰도 결과는 직접 수정해서 기록하세요." />
-        {analysis ? (
-          <div className="mt-5 space-y-3">
-            <p className="rounded-md bg-amber-50 px-3 py-3 text-sm text-amber-900">
-              {analysis.question}
-            </p>
-            {analysis.candidates.map((candidate, index) => (
-              <div key={`${candidate.foodName}-${index}`} className="rounded-md border border-zinc-100 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="font-semibold text-zinc-950">{candidate.foodName}</p>
-                    <p className="mt-1 text-sm text-zinc-500">
-                      {numberFormat(candidate.amountGrams)}g · {numberFormat(candidate.calories)}kcal
-                    </p>
-                    <p className="mt-2 text-sm text-zinc-600">
-                      탄 {numberFormat(candidate.carbs, 1)}g · 단 {numberFormat(candidate.protein, 1)}g · 지{" "}
-                      {numberFormat(candidate.fat, 1)}g
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => void saveCandidate(candidate)}
-                    className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white hover:bg-blue-800"
-                  >
-                    기록 저장
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-5 rounded-md bg-zinc-50 px-3 py-4 text-sm text-zinc-500">
-            사진을 분석하면 후보가 여기에 표시됩니다.
-          </p>
-        )}
       </section>
     </div>
   );

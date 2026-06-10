@@ -6,11 +6,13 @@ import { signIn } from "next-auth/react";
 import type { FormEvent } from "react";
 import { Suspense, useState } from "react";
 import { LockKeyhole, Mail } from "lucide-react";
+import { loginCheckResponseSchema } from "@/lib/auth-client-schemas";
+import { readJsonResponse } from "@/lib/response-json";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,21 +23,49 @@ function LoginContent() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const checkResponse = await fetch("/api/auth/login-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const checkResult = loginCheckResponseSchema.safeParse(
+        await readJsonResponse(checkResponse),
+      );
 
-    setLoading(false);
+      if (!checkResult.success) {
+        setError("로그인 응답을 읽지 못했습니다.");
+        return;
+      }
 
-    if (result?.error) {
-      setError("이메일 또는 비밀번호를 확인하세요.");
-      return;
+      if (!checkResult.data.ok) {
+        setError(checkResult.data.message);
+        return;
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("로그인 세션을 만들지 못했습니다. 다시 시도하세요.");
+        return;
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch (caught) {
+      if (caught instanceof Error) {
+        setError("로그인에 실패했습니다. 잠시 후 다시 시도하세요.");
+        return;
+      }
+
+      throw caught;
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (
@@ -52,7 +82,10 @@ function LoginContent() {
         </div>
 
         {registered ? (
-          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div
+            aria-live="polite"
+            className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          >
             회원가입이 완료되었습니다. 이제 로그인할 수 있습니다.
           </div>
         ) : null}
@@ -91,7 +124,11 @@ function LoginContent() {
             </span>
           </label>
 
-          {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+          {error ? (
+            <p aria-live="assertive" className="mt-4 text-sm text-red-700">
+              {error}
+            </p>
+          ) : null}
 
           <button
             className="mt-5 h-12 w-full rounded-md bg-zinc-950 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"

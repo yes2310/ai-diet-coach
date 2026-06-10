@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { LockKeyhole, Mail, UserRound } from "lucide-react";
+import { registerResponseSchema } from "@/lib/auth-client-schemas";
+import { readJsonResponse } from "@/lib/response-json";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,32 +21,44 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
-    const data = await response.json();
-    setLoading(false);
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const parsed = registerResponseSchema.safeParse(
+        await readJsonResponse(response),
+      );
 
-    if (!response.ok) {
-      setError(data.error ?? "회원가입에 실패했습니다.");
-      return;
+      if (!parsed.success) {
+        setError("회원가입 응답을 읽지 못했습니다.");
+        return;
+      }
+
+      if ("error" in parsed.data) {
+        setError(parsed.data.error);
+        return;
+      }
+
+      if (!response.ok) {
+        setError("회원가입에 실패했습니다.");
+        return;
+      }
+
+      router.push(
+        `/login?registered=1&email=${encodeURIComponent(parsed.data.email)}`,
+      );
+    } catch (caught) {
+      if (caught instanceof Error) {
+        setError("회원가입에 실패했습니다. 잠시 후 다시 시도하세요.");
+        return;
+      }
+
+      throw caught;
+    } finally {
+      setLoading(false);
     }
-
-    const loginResult = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (loginResult?.error) {
-      router.push("/login");
-      return;
-    }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (
@@ -109,13 +122,17 @@ export default function RegisterPage() {
             </span>
           </label>
 
-          {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+          {error ? (
+            <p aria-live="assertive" className="mt-4 text-sm text-red-700">
+              {error}
+            </p>
+          ) : null}
 
           <button
             className="mt-5 h-12 w-full rounded-md bg-zinc-950 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
             disabled={loading}
           >
-            {loading ? "가입 중..." : "가입하고 시작하기"}
+            {loading ? "가입 중..." : "가입하기"}
           </button>
         </form>
 

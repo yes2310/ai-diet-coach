@@ -1,8 +1,6 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { loginSchema } from "@/lib/validations";
+import { verifyLoginCredentials } from "@/lib/auth-credentials";
 
 export const authConfig = {
   pages: {
@@ -24,33 +22,16 @@ export const authConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
+        const result = await verifyLoginCredentials(credentials);
 
-        if (!parsed.success) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
-        });
-
-        if (!user?.passwordHash) {
-          return null;
-        }
-
-        const isValidPassword = await compare(
-          parsed.data.password,
-          user.passwordHash,
-        );
-
-        if (!isValidPassword) {
+        if (result.status !== "ok") {
           return null;
         }
 
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
           emailVerified: new Date(),
         };
       },

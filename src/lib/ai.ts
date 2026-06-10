@@ -187,3 +187,43 @@ export const foodPhotoAnalysisJsonSchema = {
     question: { type: "string" },
   },
 };
+
+export const productPhotoIdentityJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "barcode",
+    "productName",
+    "brand",
+    "servingGrams",
+    "totalPackageGrams",
+    "estimatedConsumedGrams",
+    "nutritionPer100g",
+    "confidence",
+    "note",
+  ],
+  properties: {
+    barcode: { type: "string" },
+    productName: { type: "string" },
+    brand: { type: "string" },
+    servingGrams: { type: ["number", "null"] },
+    totalPackageGrams: { type: ["number", "null"] },
+    estimatedConsumedGrams: { type: ["number", "null"] },
+    nutritionPer100g: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      required: ["calories", "carbs", "protein", "fat", "sodiumMg", "sugar", "fiber"],
+      properties: {
+        calories: { type: ["number", "null"] },
+        carbs: { type: ["number", "null"] },
+        protein: { type: ["number", "null"] },
+        fat: { type: ["number", "null"] },
+        sodiumMg: { type: ["number", "null"] },
+        sugar: { type: ["number", "null"] },
+        fiber: { type: ["number", "null"] },
+      },
+    },
+    confidence: { type: "number" },
+    note: { type: "string" },
+  },
+};

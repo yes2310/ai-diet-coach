@@ -1,13 +1,14 @@
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { readJsonRequest } from "@/lib/request-json";
 import { withApiLogging } from "@/lib/request-log";
 import { registerSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
 
 async function postHandler(request: Request) {
-  const body = await request.json().catch(() => null);
+  const body = await readJsonRequest(request);
   const parsed = registerSchema.safeParse(body);
 
   if (!parsed.success) {

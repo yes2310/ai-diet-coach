@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { splitList } from "@/lib/strings";
+import { splitList } from "./strings";
 
 export const loginSchema = z.object({
   email: z.string().email("올바른 이메일을 입력하세요.").toLowerCase(),
@@ -64,4 +64,35 @@ export const foodPhotoAnalysisSchema = z.object({
   candidates: z.array(foodPhotoCandidateSchema).min(1).max(5),
   needsUserConfirmation: z.boolean(),
   question: z.string(),
+});
+
+const optionalNumber = (min: number, max: number) =>
+  z.preprocess(
+    (value) => (value === null || value === "" ? undefined : value),
+    z.coerce.number().min(min).max(max).optional(),
+  );
+
+export const productPhotoNutritionSchema = z.object({
+  calories: optionalNumber(0, 10000),
+  carbs: optionalNumber(0, 2000),
+  protein: optionalNumber(0, 2000),
+  fat: optionalNumber(0, 2000),
+  sodiumMg: optionalNumber(0, 100000),
+  sugar: optionalNumber(0, 2000),
+  fiber: optionalNumber(0, 2000),
+});
+
+export const productPhotoIdentitySchema = z.object({
+  barcode: z.string().trim().optional().default(""),
+  productName: z.string().trim().optional().default(""),
+  brand: z.string().trim().optional().default(""),
+  servingGrams: optionalNumber(1, 5000),
+  totalPackageGrams: optionalNumber(1, 100000),
+  estimatedConsumedGrams: optionalNumber(1, 5000),
+  nutritionPer100g: z.preprocess(
+    (value) => (value === null ? undefined : value),
+    productPhotoNutritionSchema.optional(),
+  ),
+  confidence: z.coerce.number().min(0).max(1).optional().default(0),
+  note: z.string().trim().optional().default(""),
 });
