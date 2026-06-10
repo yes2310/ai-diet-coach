@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeBarcode } from "./barcodes";
 import { calculateFoodAmount, round, type NutritionTotals } from "./nutrition";
 
 const openFoodFactsBaseUrl = "https://world.openfoodfacts.org";
@@ -147,11 +148,7 @@ export function productCandidateToMealItem(
   };
 }
 
-export function normalizeBarcode(value: unknown) {
-  const raw = typeof value === "number" ? String(value) : typeof value === "string" ? value : "";
-  const digits = raw.replace(/\D/g, "");
-  return digits.length >= 8 && digits.length <= 14 ? digits : "";
-}
+export { normalizeBarcode };
 
 function readFiniteNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {

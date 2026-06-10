@@ -41,17 +41,25 @@ export function PhotoAnalyzer({
 
   return (
     <div className="space-y-5">
-      <div className="inline-flex rounded-md border border-[var(--line)] bg-white p-1 shadow-sm">
+      <div
+        role="tablist"
+        aria-label="식품 인식 방식"
+        className="inline-flex rounded-md border border-[var(--line)] bg-white p-1 shadow-sm"
+      >
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === "product"}
           onClick={() => setMode("product")}
           className={modeButtonClass(mode === "product")}
         >
           <PackageSearch className="h-4 w-4" aria-hidden />
-          포장식품
+          포장식품 스캔
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === "food"}
           onClick={() => setMode("food")}
           className={modeButtonClass(mode === "food")}
         >
@@ -80,7 +88,7 @@ export function SectionHeader({
     <div>
       <h2 className="text-xl font-semibold text-zinc-950">{title}</h2>
       {description ? (
-        <p className="mt-1 text-sm leading-6 text-zinc-600">{description}</p>
+        <p className="mt-1 break-keep text-sm leading-6 text-zinc-600">{description}</p>
       ) : null}
     </div>
   );

@@ -3,10 +3,10 @@
 import clsx from "clsx";
 import {
   BarChart3,
-  Camera,
   ChefHat,
   Home,
   Settings,
+  ScanLine,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -19,7 +19,7 @@ const tabs: readonly {
 }[] = [
   { id: "home", label: "홈", icon: Home },
   { id: "meals", label: "기록", icon: ChefHat },
-  { id: "photo", label: "사진", icon: Camera },
+  { id: "photo", label: "스캔", icon: ScanLine },
   { id: "analysis", label: "분석", icon: BarChart3 },
   { id: "profile", label: "내 정보", icon: Settings },
 ];

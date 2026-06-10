@@ -208,7 +208,11 @@ export const productPhotoIdentityJsonSchema = {
     brand: { type: "string" },
     servingGrams: { type: ["number", "null"] },
     totalPackageGrams: { type: ["number", "null"] },
-    estimatedConsumedGrams: { type: ["number", "null"] },
+    estimatedConsumedGrams: {
+      type: ["number", "null"],
+      description:
+        "Estimated grams the user actually ate when the photo shows portion, remaining package, bites, or other reliable quantity cues; null if uncertain.",
+    },
     nutritionPer100g: {
       type: ["object", "null"],
       additionalProperties: false,

@@ -122,14 +122,14 @@ async function identifyProductFromPhoto(file: File) {
         {
           role: "system",
           content:
-            "Read packaged food photos for nutrition logging. Extract a visible barcode, product name, brand, serving/package grams, likely eaten grams if visible, and nutrition facts per 100g if shown. Return only valid JSON. Use empty strings or null when uncertain.",
+            "Read packaged food photos for nutrition logging. Extract a visible barcode, product name, brand, serving/package grams, nutrition facts per 100g if shown, and the grams the user appears to have eaten when the photo shows reliable portion or remaining-amount cues. Return only valid JSON. Use empty strings or null when uncertain.",
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: `사진 속 포장식품 정보를 다음 JSON Schema에 맞춰 추출해줘. 바코드는 숫자만, nutritionPer100g는 100g 기준이 보일 때만 채워줘: ${JSON.stringify(productPhotoIdentityJsonSchema)}`,
+              text: `사진 속 포장식품과 사용자가 먹은 양을 다음 JSON Schema에 맞춰 추출해줘. 바코드는 숫자만 입력해줘. estimatedConsumedGrams는 남은 양, 한입 먹은 흔적, 빈 포장, 접시/손/포장 중량 같은 단서로 실제 섭취량을 g 단위로 추정할 수 있을 때만 채우고, 단서가 부족하면 null로 둬. nutritionPer100g는 100g 기준이 보일 때만 채워줘: ${JSON.stringify(productPhotoIdentityJsonSchema)}`,
             },
             {
               type: "image_url",

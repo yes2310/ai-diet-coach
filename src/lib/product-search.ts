@@ -5,6 +5,10 @@ import {
   offProductSchema,
   type ProductNutritionCandidate,
 } from "./product-nutrition";
+import {
+  buildProductSearchQueries,
+  hasCupSearchIntent,
+} from "./product-search-queries";
 
 export {
   createPhotoLabelProduct,
@@ -64,7 +68,7 @@ export async function searchProductCandidates(input: {
   }
 
   if (input.query && candidates.length < limit) {
-    const codes = await searchProductCodes(input.query, limit);
+    const codes = await searchProductCodes(input.query, Math.max(limit * 4, 8));
 
     for (const code of codes) {
       if (candidates.some((candidate) => candidate.barcode === code)) {
@@ -83,7 +87,21 @@ export async function searchProductCandidates(input: {
     }
   }
 
-  return candidates.slice(0, limit);
+  if (!input.query) {
+    return candidates.slice(0, limit);
+  }
+
+  const exactBarcodeCandidates = barcode
+    ? candidates.filter((candidate) => candidate.barcode === barcode)
+    : [];
+  const searchCandidates = barcode
+    ? candidates.filter((candidate) => candidate.barcode !== barcode)
+    : candidates;
+
+  return [
+    ...exactBarcodeCandidates,
+    ...rankProductCandidates(searchCandidates, input.query),
+  ].slice(0, limit);
 }
 
 async function fetchProductByBarcode(barcode: string) {
@@ -101,9 +119,29 @@ async function fetchProductByBarcode(barcode: string) {
 }
 
 async function searchProductCodes(query: string, limit: number) {
+  const codes: string[] = [];
+
+  for (const searchQuery of buildProductSearchQueries(query)) {
+    const nextCodes = await searchProductCodesForQuery(searchQuery, limit);
+
+    for (const code of nextCodes) {
+      if (!codes.includes(code)) {
+        codes.push(code);
+      }
+
+      if (codes.length >= limit) {
+        return codes;
+      }
+    }
+  }
+
+  return codes;
+}
+
+async function searchProductCodesForQuery(query: string, limit: number) {
   const url = new URL("/search", searchBaseUrl);
   url.searchParams.set("q", query);
-  url.searchParams.set("page_size", String(Math.min(limit, 4)));
+  url.searchParams.set("page_size", String(Math.min(limit, 20)));
 
   const json = await fetchJson(url);
   const parsed = searchResponseSchema.safeParse(json);
@@ -116,6 +154,39 @@ async function searchProductCodes(query: string, limit: number) {
     .map((hit) => normalizeBarcode(hit.code))
     .filter(Boolean)
     .slice(0, limit);
+}
+
+function rankProductCandidates(
+  candidates: readonly ProductNutritionCandidate[],
+  query: string,
+) {
+  return candidates
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      score: productCandidateScore(candidate, query),
+    }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((ranked) => ranked.candidate);
+}
+
+function productCandidateScore(
+  candidate: ProductNutritionCandidate,
+  query: string,
+) {
+  const text = [
+    candidate.name,
+    candidate.brand,
+    candidate.servingLabel,
+  ].join(" ").toLowerCase();
+
+  if (!hasCupSearchIntent(query)) {
+    return 0;
+  }
+
+  const explicitCupMatch = /\b(cup|bowl)\b|컵|사발/i.test(text);
+  const singleServePackage = candidate.servingGrams > 0 && candidate.servingGrams <= 100;
+  return (explicitCupMatch ? 4 : 0) + (singleServePackage ? 1 : 0);
 }
 
 async function fetchJson(url: URL): Promise<unknown | null> {

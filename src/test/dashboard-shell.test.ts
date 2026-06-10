@@ -26,4 +26,15 @@ describe("dashboard shell", () => {
     expect(shouldShowDashboardNavigation(input)).toBe(true);
     expect(dashboardTitle(input)).toBe("오늘 식단 상태");
   });
+
+  it("uses the selected dashboard tab as the page title after onboarding", () => {
+    const input = {
+      summary: { profile: { age: 30 } },
+      loading: false,
+      error: "",
+      activeTab: "photo" as const,
+    };
+
+    expect(dashboardTitle(input)).toBe("식품 스캔");
+  });
 });

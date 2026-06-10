@@ -1,12 +1,19 @@
 "use client";
 
-import { Camera, ImagePlus, PackageSearch } from "lucide-react";
+import { PackageSearch } from "lucide-react";
 import { useEffect, useState } from "react";
+import { defaultMealTypeForKoreaTime } from "@/lib/meal-defaults";
+import { initialProductAmounts } from "@/lib/product-amounts";
+import {
+  buildProductSearchFormData,
+  hasProductSearchInput,
+} from "@/lib/product-search-form";
 import {
   productSearchResponseSchema,
   type ProductNutritionCandidate,
 } from "@/lib/photo-client-schemas";
-import { PhotoInput } from "@/components/photo-input";
+import { readJsonResponse } from "@/lib/response-json";
+import { ProductCaptureInputs } from "@/components/product-capture-inputs";
 import { ProductCandidateCard, productToMealItem } from "@/components/product-candidate-card";
 import {
   Field,
@@ -32,8 +39,8 @@ export function ProductPhotoSearch({
   readonly dateKey: string;
   readonly onSaved: () => void;
 }) {
-  const [mealType, setMealType] = useState<MealType>("SNACK");
-  const [file, setFile] = useState<File | null>(null);
+  const [mealType, setMealType] = useState<MealType>(defaultMealTypeForKoreaTime);
+  const [amountPhoto, setAmountPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [barcode, setBarcode] = useState("");
   const [query, setQuery] = useState("");
@@ -51,35 +58,52 @@ export function ProductPhotoSearch({
     };
   }, [previewUrl]);
 
-  function selectFile(nextFile: File | null) {
-    setFile(nextFile);
+  function selectAmountPhoto(nextPhoto: File | null) {
+    setAmountPhoto(nextPhoto);
     setPreviewUrl((currentUrl) => {
       if (currentUrl) {
         URL.revokeObjectURL(currentUrl);
       }
 
-      return nextFile ? URL.createObjectURL(nextFile) : "";
+      return nextPhoto ? URL.createObjectURL(nextPhoto) : "";
     });
   }
 
-  async function searchProducts() {
-    if (!file && !barcode.trim() && !query.trim()) return;
+  async function searchProducts(input?: {
+    readonly barcode?: string;
+    readonly amountPhoto?: File | null;
+    readonly query?: string;
+  }) {
+    const searchAmountPhoto =
+      input?.amountPhoto === undefined ? amountPhoto : input.amountPhoto;
+    const searchBarcode = input?.barcode ?? barcode;
+    const searchQuery = input?.query ?? query;
+
+    if (
+      !hasProductSearchInput({
+        amountPhoto: searchAmountPhoto,
+        barcode: searchBarcode,
+        query: searchQuery,
+      })
+    ) {
+      return;
+    }
+
     setLoading(true);
     setMessage("");
     setProducts([]);
 
-    const formData = new FormData();
-    if (file) formData.append("image", file);
-    formData.append("barcode", barcode);
-    formData.append("query", query);
-
     try {
       const response = await fetch("/api/photo/product-search", {
         method: "POST",
-        body: formData,
+        body: buildProductSearchFormData({
+          amountPhoto: searchAmountPhoto,
+          barcode: searchBarcode,
+          query: searchQuery,
+        }),
       });
       const parsed = productSearchResponseSchema.safeParse(
-        await response.json().catch(() => null),
+        await readJsonResponse(response),
       );
 
       if (!parsed.success || !response.ok) {
@@ -95,7 +119,7 @@ export function ProductPhotoSearch({
       const nextProducts = parsed.data.products;
       setIdentity(nextIdentity);
       setProducts(nextProducts);
-      setAmounts(initialAmounts(nextProducts, nextIdentity?.estimatedConsumedGrams));
+      setAmounts(initialProductAmounts(nextProducts, nextIdentity?.estimatedConsumedGrams));
       setMessage(
         nextProducts.length
           ? ""
@@ -106,6 +130,11 @@ export function ProductPhotoSearch({
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleBarcodeDetected(nextBarcode: string) {
+    setBarcode(nextBarcode);
+    void searchProducts({ barcode: nextBarcode });
   }
 
   async function saveProduct(product: ProductNutritionCandidate) {
@@ -131,9 +160,15 @@ export function ProductPhotoSearch({
       <section className="rounded-lg border border-[var(--line)] bg-white p-5 shadow-sm">
         <SectionHeader
           title="포장식품 검색"
-          description="바코드와 상품명으로 영양정보를 찾고 실제 먹은 g만큼 저장합니다."
+          description="바코드는 사진으로 추출하고, 섭취량 사진은 먹은 양을 g 단위로 추정합니다."
         />
-        <div className="mt-5 space-y-4">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void searchProducts();
+          }}
+          className="mt-5 space-y-4"
+        >
           <Field label="식사 구분">
             <select
               value={mealType}
@@ -147,15 +182,14 @@ export function ProductPhotoSearch({
               ))}
             </select>
           </Field>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <PhotoInput label="패키지 선택" icon={<ImagePlus className="h-4 w-4" />} onChange={selectFile} />
-            <PhotoInput label="바코드 촬영" icon={<Camera className="h-4 w-4" />} capture onChange={selectFile} dark />
-          </div>
-          {file ? <p className="truncate text-xs text-zinc-500">{file.name}</p> : null}
-          {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt="업로드한 포장식품" className="aspect-[4/3] w-full rounded-lg object-cover" />
-          ) : null}
+          <ProductCaptureInputs
+            amountPhoto={amountPhoto}
+            barcode={barcode}
+            loading={loading}
+            previewUrl={previewUrl}
+            onAmountPhotoChange={selectAmountPhoto}
+            onBarcodeDetected={handleBarcodeDetected}
+          />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="바코드">
               <input
@@ -163,7 +197,7 @@ export function ProductPhotoSearch({
                 onChange={(event) => setBarcode(event.target.value)}
                 className="input"
                 inputMode="numeric"
-                placeholder="숫자"
+                placeholder="촬영 또는 숫자 입력"
               />
             </Field>
             <Field label="상품명">
@@ -176,9 +210,10 @@ export function ProductPhotoSearch({
             </Field>
           </div>
           <button
-            type="button"
-            onClick={searchProducts}
-            disabled={(!file && !barcode.trim() && !query.trim()) || loading}
+            type="submit"
+            disabled={
+              !hasProductSearchInput({ amountPhoto, barcode, query }) || loading
+            }
             className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-zinc-950 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-60"
           >
             <PackageSearch className="h-4 w-4" aria-hidden />
@@ -187,20 +222,31 @@ export function ProductPhotoSearch({
           {identity?.note ? (
             <p className="rounded-md bg-zinc-50 px-3 py-3 text-sm text-zinc-600">{identity.note}</p>
           ) : null}
-          {message ? <p className="text-sm text-zinc-700">{message}</p> : null}
-        </div>
+          {message ? <p aria-live="polite" className="text-sm text-zinc-700">{message}</p> : null}
+        </form>
       </section>
 
       <section className="rounded-lg border border-[var(--line)] bg-white p-5 shadow-sm">
         <SectionHeader title="상품 후보" description="섭취량을 g 단위로 입력하면 영양값이 다시 계산됩니다." />
-        {products.length ? (
+        {loading ? (
+          <div className="mt-5 rounded-md bg-zinc-50 px-3 py-4 text-sm text-zinc-600">
+            <div className="h-2 w-28 animate-pulse rounded-full bg-zinc-200" />
+            <p className="mt-3">상품 정보를 찾고 있습니다.</p>
+          </div>
+        ) : products.length ? (
           <div className="mt-5 space-y-3">
             {products.map((product) => (
               <ProductCandidateCard
                 key={product.id}
                 product={product}
                 amountGrams={amounts[product.id] ?? 100}
-                onAmountChange={(nextAmount) => setAmounts({ ...amounts, [product.id]: nextAmount })}
+                photoEstimatedGrams={identity?.estimatedConsumedGrams}
+                onAmountChange={(nextAmount) =>
+                  setAmounts((currentAmounts) => ({
+                    ...currentAmounts,
+                    [product.id]: nextAmount,
+                  }))
+                }
                 onSave={saveProduct}
               />
             ))}
@@ -213,10 +259,4 @@ export function ProductPhotoSearch({
       </section>
     </div>
   );
-}
-
-function initialAmounts(products: readonly ProductNutritionCandidate[], detectedAmount?: number) {
-  return products.reduce<Record<string, number>>((acc, product) => {
-    return { ...acc, [product.id]: detectedAmount ?? product.servingGrams ?? 100 };
-  }, {});
 }

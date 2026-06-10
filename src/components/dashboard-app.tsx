@@ -22,6 +22,7 @@ import {
   dashboardTitle,
   shouldShowDashboardNavigation,
 } from "@/lib/dashboard-shell";
+import { defaultMealTypeForKoreaTime } from "@/lib/meal-defaults";
 import { formatList } from "@/lib/strings";
 
 type Gender = "MALE" | "FEMALE" | "OTHER";
@@ -389,7 +390,7 @@ export function DashboardApp({
   }, [activeTab, dateKey, error, loadSummary, loading, summary, userEmail]);
 
   const showNavigation = shouldShowDashboardNavigation({ summary, loading, error });
-  const pageTitle = dashboardTitle({ summary, loading, error });
+  const pageTitle = dashboardTitle({ summary, loading, error, activeTab });
 
   return (
     <main
@@ -751,7 +752,7 @@ function MealLogger({
   meals: Meal[];
   onChanged: () => void;
 }) {
-  const [mealType, setMealType] = useState<MealType>("BREAKFAST");
+  const [mealType, setMealType] = useState<MealType>(defaultMealTypeForKoreaTime);
   const [note, setNote] = useState("");
   const [query, setQuery] = useState("");
   const [foods, setFoods] = useState<FoodItem[]>([]);

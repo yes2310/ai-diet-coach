@@ -2,6 +2,7 @@
 
 import { Camera, ImagePlus, Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import { defaultMealTypeForKoreaTime } from "@/lib/meal-defaults";
 import { foodPhotoAnalyzeResponseSchema } from "@/lib/photo-client-schemas";
 import { PhotoInput } from "@/components/photo-input";
 import {
@@ -22,7 +23,7 @@ export function FoodPhotoAnalyzer({
   readonly dateKey: string;
   readonly onSaved: () => void;
 }) {
-  const [mealType, setMealType] = useState<MealType>("LUNCH");
+  const [mealType, setMealType] = useState<MealType>(defaultMealTypeForKoreaTime);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [analysis, setAnalysis] = useState<{
